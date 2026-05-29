@@ -48,8 +48,46 @@ def get_vault_path():
 
 
 def set_vault_path(path):
-    data = json.dumps({"vault_path": os.path.abspath(path)}, indent=2)
-    _atomic_write(CONFIG_FILE, data.encode("utf-8"))
+    path = os.path.abspath(path)
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    data["vault_path"] = path
+    known = data.get("known_vaults", [])
+    if path not in known:
+        known.append(path)
+    data["known_vaults"] = known
+    _atomic_write(CONFIG_FILE, json.dumps(data, indent=2).encode("utf-8"))
+
+
+def get_known_vaults():
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        known = data.get("known_vaults", [])
+        vp = data.get("vault_path")
+        if vp and vp not in known:
+            known.append(vp)
+        return [p for p in known if p and os.path.exists(p) and is_valid_vault(p)]
+    except Exception:
+        p = get_vault_path()
+        return [p] if p and os.path.exists(p) else []
+
+
+def remove_known_vault(path):
+    path = os.path.abspath(path)
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    data["known_vaults"] = [p for p in data.get("known_vaults", []) if p != path]
+    if data.get("vault_path") == path:
+        remaining = data["known_vaults"]
+        data["vault_path"] = remaining[0] if remaining else None
+    _atomic_write(CONFIG_FILE, json.dumps(data, indent=2).encode("utf-8"))
 
 
 def vault_ready():

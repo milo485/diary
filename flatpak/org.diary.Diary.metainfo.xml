@@ -24,6 +24,20 @@
   <launchable type="desktop-id">org.diary.Diary.desktop</launchable>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2" date="2026-05-30">
+      <description>
+        <p>Visual overhaul and multi-diary management.</p>
+        <ul>
+          <li>Modern welcome, unlock and create screens using Adwaita status pages</li>
+          <li>Manage multiple diary vaults: switch, add and remove from a dedicated dialog</li>
+          <li>Live Markdown preview while writing — formatting is applied as you type</li>
+          <li>Formatting toolbar with icon buttons in linked groups</li>
+          <li>Card-style editor area and constrained password field width</li>
+          <li>Today's date shown as subtitle in the main header</li>
+          <li>Entries heading with count in the sidebar</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1" date="2026-05-29">
       <description>
         <p>

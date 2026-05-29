@@ -81,6 +81,7 @@ class DiaryWindow(Adw.ApplicationWindow):
         for name, cb in (
             ("new_diary", lambda *_: self._build_create()),
             ("open_diary", lambda *_: self._open_dialog()),
+            ("manage_diaries", lambda *_: self._show_manage_dialog()),
             ("export_copy", lambda *_: self._export_dialog() if self.fernet
                 else self._toast("Unlock a diary first.")),
             ("lock", lambda *_: self._lock()),
@@ -115,6 +116,27 @@ class DiaryWindow(Adw.ApplicationWindow):
         toolbar.set_content(clamp)
         self.toast_overlay.set_child(toolbar)
 
+    def _manage_button(self):
+        btn = Gtk.Button(icon_name="view-list-symbolic",
+                         tooltip_text="Manage diaries",
+                         css_classes=["flat"])
+        btn.connect("clicked", lambda *_: self._show_manage_dialog())
+        return btn
+
+    def _status_page(self, icon_name, title, description=None):
+        page = Adw.StatusPage()
+        page.set_icon_name(icon_name)
+        page.set_title(title)
+        if description:
+            page.set_description(description)
+        header = Adw.HeaderBar(css_classes=["flat"])
+        header.pack_end(self._manage_button())
+        toolbar = Adw.ToolbarView()
+        toolbar.add_top_bar(header)
+        toolbar.set_content(page)
+        self.toast_overlay.set_child(toolbar)
+        return page
+
     def _column(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         box.set_valign(Gtk.Align.CENTER)
@@ -130,17 +152,18 @@ class DiaryWindow(Adw.ApplicationWindow):
 
     # --- Welcome / create / open / unlock -----------------------------------
     def _build_welcome(self):
-        box = self._column()
-        box.append(Gtk.Label(label="📔", css_classes=["title-1"]))
-        box.append(Gtk.Label(label="Welcome to Diary", css_classes=["title-1"]))
-        box.append(Gtk.Label(
-            label="Create a new encrypted diary, or open an existing diary file.",
-            wrap=True, justify=Gtk.Justification.CENTER, css_classes=["dim-label"]))
+        page = self._status_page(
+            "accessories-text-editor-symbolic",
+            "Welcome to Diary",
+            "Create a new encrypted diary, or open an existing diary file.",
+        )
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                      halign=Gtk.Align.CENTER)
 
         create_btn = Gtk.Button(label="Create new diary",
                                 css_classes=["suggested-action", "pill"],
                                 halign=Gtk.Align.CENTER)
-        create_btn.set_margin_top(8)
         create_btn.connect("clicked", lambda *_: self._build_create())
         box.append(create_btn)
 
@@ -152,12 +175,17 @@ class DiaryWindow(Adw.ApplicationWindow):
         same = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         same.add_widget(create_btn)
         same.add_widget(open_btn)
-        self._centered(box)
+        page.set_child(box)
 
     def _build_create(self):
-        box = self._column()
-        box.append(Gtk.Label(label="📔", css_classes=["title-1"]))
-        box.append(Gtk.Label(label="Create new diary", css_classes=["title-2"]))
+        page = self._status_page(
+            "accessories-text-editor-symbolic",
+            "Create New Diary",
+            "Choose a password — without it the entries cannot be recovered. "
+            "At least 6 characters.",
+        )
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
 
         group = Adw.PreferencesGroup()
         self.c_pw = Adw.PasswordEntryRow(title="Password")
@@ -167,11 +195,6 @@ class DiaryWindow(Adw.ApplicationWindow):
         group.add(self.c_pw)
         group.add(self.c_pw2)
         box.append(group)
-
-        box.append(Gtk.Label(
-            label="Next you'll choose where to save the diary file. Without this "
-                  "password the entries cannot be recovered. (at least 6 characters)",
-            wrap=True, justify=Gtk.Justification.CENTER, css_classes=["dim-label"]))
 
         self.create_error = Gtk.Label(css_classes=["error"], visible=False, wrap=True)
         box.append(self.create_error)
@@ -185,7 +208,8 @@ class DiaryWindow(Adw.ApplicationWindow):
         back.connect("clicked", lambda *_: self._build_welcome())
         box.append(back)
 
-        self._centered(box)
+        clamp = Adw.Clamp(maximum_size=360, child=box)
+        page.set_child(clamp)
         self.c_pw.grab_focus()
 
     def _create_choose_location(self):
@@ -242,13 +266,14 @@ class DiaryWindow(Adw.ApplicationWindow):
         self._toast("Diary opened. Enter its password to unlock.")
 
     def _build_unlock(self):
-        box = self._column()
-        box.append(Gtk.Label(label="📔", css_classes=["title-1"]))
-        box.append(Gtk.Label(label="Unlock diary", css_classes=["title-2"]))
-        box.append(Gtk.Label(label=core.get_vault_path() or "", wrap=True,
-                             wrap_mode=Pango.WrapMode.WORD_CHAR,
-                             justify=Gtk.Justification.CENTER,
-                             css_classes=["dim-label", "caption"]))
+        vault_path = core.get_vault_path() or ""
+        page = self._status_page(
+            "system-lock-screen-symbolic",
+            "Unlock Diary",
+            vault_path or None,
+        )
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
 
         group = Adw.PreferencesGroup()
         self.u_pw = Adw.PasswordEntryRow(title="Password")
@@ -264,13 +289,111 @@ class DiaryWindow(Adw.ApplicationWindow):
         btn.connect("clicked", lambda *_: self._do_unlock())
         box.append(btn)
 
-        other = Gtk.Button(label="Open a different diary…", css_classes=["flat"],
-                           halign=Gtk.Align.CENTER)
-        other.connect("clicked", lambda *_: self._open_dialog())
-        box.append(other)
-
-        self._centered(box)
+        clamp = Adw.Clamp(maximum_size=360, child=box)
+        page.set_child(clamp)
         self.u_pw.grab_focus()
+
+    def _show_manage_dialog(self):
+        dialog = Adw.Dialog()
+        dialog.set_title("My Diaries")
+        dialog.set_content_width(420)
+        dialog.set_content_height(480)
+
+        toolbar_view = Adw.ToolbarView()
+        toolbar_view.add_top_bar(Adw.HeaderBar())
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
+        scroller = Gtk.ScrolledWindow(vexpand=True)
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        inner.set_margin_top(16)
+        inner.set_margin_bottom(16)
+        inner.set_margin_start(16)
+        inner.set_margin_end(16)
+
+        vault_group = Adw.PreferencesGroup(title="Vaults")
+        self._fill_vault_group(vault_group, dialog)
+        inner.append(vault_group)
+        scroller.set_child(inner)
+        outer.append(scroller)
+
+        outer.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+
+        btn_box = Gtk.Box(spacing=8, margin_top=12, margin_bottom=12,
+                          margin_start=16, margin_end=16, homogeneous=True)
+        add_btn = Gtk.Button(label="Add existing…")
+        add_btn.connect("clicked", lambda *_: (
+            dialog.close(), GLib.idle_add(self._open_dialog)))
+        create_btn = Gtk.Button(label="Create new…",
+                                css_classes=["suggested-action"])
+        create_btn.connect("clicked", lambda *_: (
+            dialog.close(), GLib.idle_add(self._build_create)))
+        btn_box.append(add_btn)
+        btn_box.append(create_btn)
+        outer.append(btn_box)
+
+        toolbar_view.set_content(outer)
+        dialog.set_child(toolbar_view)
+        dialog.present(self)
+
+    def _fill_vault_group(self, group, dialog):
+        import os as _os
+        vaults = core.get_known_vaults()
+        active = core.get_vault_path()
+
+        if not vaults:
+            row = Adw.ActionRow(
+                title="No diaries yet",
+                subtitle="Create a new diary or add an existing file.")
+            row.set_sensitive(False)
+            group.add(row)
+            return
+
+        for path in vaults:
+            name = _os.path.splitext(_os.path.basename(path))[0]
+            row = Adw.ActionRow(title=name, subtitle=path)
+            row.set_activatable(True)
+
+            if active and _os.path.abspath(active) == _os.path.abspath(path):
+                row.add_suffix(Gtk.Image(icon_name="object-select-symbolic",
+                                         valign=Gtk.Align.CENTER,
+                                         css_classes=["dim-label"]))
+
+            trash = Gtk.Button(icon_name="user-trash-symbolic",
+                               tooltip_text="Remove from list",
+                               css_classes=["flat"],
+                               valign=Gtk.Align.CENTER)
+
+            def _make_remove(p, r, g, d):
+                def on_remove(*_):
+                    core.remove_known_vault(p)
+                    g.remove(r)
+                    if not core.get_known_vaults():
+                        d.close()
+                        GLib.idle_add(
+                            self._build_unlock if core.vault_ready()
+                            else self._build_welcome)
+                return on_remove
+
+            trash.connect("clicked", _make_remove(path, row, group, dialog))
+            row.add_suffix(trash)
+
+            def _make_switch(p, d):
+                def on_activate(*_):
+                    if active and _os.path.abspath(active) == _os.path.abspath(p):
+                        d.close()
+                        return
+                    try:
+                        core.open_vault(p)
+                    except Exception:
+                        self._toast("Could not open that diary file.")
+                        return
+                    d.close()
+                    GLib.idle_add(self._lock)
+                return on_activate
+
+            row.connect("activated", _make_switch(path, dialog))
+            group.add(row)
 
     def _do_unlock(self):
         try:
@@ -292,6 +415,7 @@ class DiaryWindow(Adw.ApplicationWindow):
         files = Gio.Menu()
         files.append("New diary…", "win.new_diary")
         files.append("Open diary…", "win.open_diary")
+        files.append("Manage diaries…", "win.manage_diaries")
         files.append("Export a copy…", "win.export_copy")
         lock = Gio.Menu()
         lock.append("Lock", "win.lock")
@@ -307,10 +431,13 @@ class DiaryWindow(Adw.ApplicationWindow):
         self.current_index = None
 
         header = Adw.HeaderBar()
-        header.set_title_widget(Adw.WindowTitle(title="My Diary", subtitle=""))
-        new_btn = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New entry")
+        today = datetime.now().strftime("%A, %B %-d")
+        header.set_title_widget(Adw.WindowTitle(title="My Diary", subtitle=today))
+        new_btn = Gtk.Button(icon_name="list-add-symbolic", tooltip_text="New entry",
+                             css_classes=["flat"])
         new_btn.connect("clicked", lambda *_: self._compose_new())
         header.pack_start(new_btn)
+        header.pack_end(self._manage_button())
 
         split = Adw.OverlaySplitView()
         split.set_sidebar_position(Gtk.PackType.END)  # entry list on the right
@@ -328,7 +455,6 @@ class DiaryWindow(Adw.ApplicationWindow):
         self._refresh_sidebar()
         self._compose_new()
 
-    # Content area: a stack with an editor page and a reader page.
     def _build_content(self):
         self.content_stack = Gtk.Stack()
         self.content_stack.add_named(self._build_compose_page(), "compose")
@@ -342,32 +468,48 @@ class DiaryWindow(Adw.ApplicationWindow):
         page.set_margin_start(12)
         page.set_margin_end(12)
 
-        # Formatting toolbar.
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4,
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6,
                       css_classes=["toolbar"])
-        for label, tip, fn in (
-            ("B", "Bold", lambda: self._wrap("**")),
-            ("I", "Italic", lambda: self._wrap("*")),
-            ("H", "Heading", lambda: self._prefix("# ")),
-            ("•", "Bullet list", lambda: self._prefix("- ")),
+
+        icon_group = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                             css_classes=["linked"])
+        for icon_name, tip, fn in (
+            ("format-text-bold-symbolic", "Bold (**text**)", lambda: self._wrap("**")),
+            ("format-text-italic-symbolic", "Italic (*text*)", lambda: self._wrap("*")),
         ):
-            b = Gtk.Button(label=label, tooltip_text=tip, css_classes=["flat"])
+            b = Gtk.Button(icon_name=icon_name, tooltip_text=tip)
             b.connect("clicked", lambda _w, f=fn: f())
-            bar.append(b)
-        bar.append(Gtk.Label(label="Markdown supported", css_classes=["dim-label"],
+            icon_group.append(b)
+        bar.append(icon_group)
+
+        text_group = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,
+                             css_classes=["linked"])
+        for label, tip, fn in (
+            ("H", "Heading (# text)", lambda: self._prefix("# ")),
+            ("•", "Bullet (- text)", lambda: self._prefix("- ")),
+        ):
+            b = Gtk.Button(label=label, tooltip_text=tip)
+            b.connect("clicked", lambda _w, f=fn: f())
+            text_group.append(b)
+        bar.append(text_group)
+
+        bar.append(Gtk.Label(label="Markdown", css_classes=["dim-label"],
                              hexpand=True, halign=Gtk.Align.END))
         page.append(bar)
 
-        frame = Gtk.Frame(vexpand=True)
-        scroller = Gtk.ScrolledWindow()
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True,
+                       css_classes=["card"])
+        card.set_overflow(Gtk.Overflow.HIDDEN)
+        scroller = Gtk.ScrolledWindow(vexpand=True)
         self.editor = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR)
-        self.editor.set_top_margin(8)
-        self.editor.set_bottom_margin(8)
-        self.editor.set_left_margin(8)
-        self.editor.set_right_margin(8)
+        self.editor.set_top_margin(12)
+        self.editor.set_bottom_margin(12)
+        self.editor.set_left_margin(12)
+        self.editor.set_right_margin(12)
+        self._setup_editor_tags()
         scroller.set_child(self.editor)
-        frame.set_child(scroller)
-        page.append(frame)
+        card.append(scroller)
+        page.append(card)
 
         actions = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         save = Gtk.Button(label="Save entry", css_classes=["suggested-action"])
@@ -415,12 +557,16 @@ class DiaryWindow(Adw.ApplicationWindow):
         box.set_margin_start(8)
         box.set_margin_end(8)
 
-        self.search = Gtk.SearchEntry(placeholder_text="Search entries …")
+        header_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        header_row.append(Gtk.Label(label="Entries", xalign=0, hexpand=True,
+                                    css_classes=["heading"]))
+        self.count_label = Gtk.Label(xalign=1, css_classes=["dim-label", "caption"])
+        header_row.append(self.count_label)
+        box.append(header_row)
+
+        self.search = Gtk.SearchEntry(placeholder_text="Search …")
         self.search.connect("search-changed", lambda *_: self._refresh_sidebar())
         box.append(self.search)
-
-        self.count_label = Gtk.Label(xalign=0, css_classes=["dim-label", "caption"])
-        box.append(self.count_label)
 
         scroller = Gtk.ScrolledWindow(vexpand=True)
         self.listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE,
@@ -471,6 +617,72 @@ class DiaryWindow(Adw.ApplicationWindow):
         if hasattr(self, "listbox"):
             self.listbox.unselect_all()
         self.editor.grab_focus()
+
+    # --- Live markdown formatting in the editor ----------------------------
+    def _setup_editor_tags(self):
+        buf = self.editor.get_buffer()
+        buf.create_tag("bold", weight=Pango.Weight.BOLD)
+        buf.create_tag("italic", style=Pango.Style.ITALIC)
+        buf.create_tag("code", family="Monospace")
+        buf.create_tag("h1", weight=Pango.Weight.BOLD, scale=1.6)
+        buf.create_tag("h2", weight=Pango.Weight.BOLD, scale=1.35)
+        buf.create_tag("h3", weight=Pango.Weight.BOLD, scale=1.15)
+        buf.create_tag("syntax", invisible=True)
+        buf.connect("changed", self._reformat_editor)
+
+    def _reformat_editor(self, buf):
+        s = buf.get_start_iter()
+        e = buf.get_end_iter()
+        for name in ("bold", "italic", "code", "h1", "h2", "h3", "syntax"):
+            buf.remove_tag_by_name(name, s, e)
+        text = buf.get_text(s, e, False)
+        offset = 0
+        for line in text.split("\n"):
+            self._reformat_line(buf, line, offset)
+            offset += len(line) + 1
+
+    def _reformat_line(self, buf, line, off):
+        def itr(pos):
+            return buf.get_iter_at_offset(off + pos)
+
+        def apply(tag, a, b):
+            if a < b:
+                buf.apply_tag_by_name(tag, itr(a), itr(b))
+
+        def syntax(a, b):
+            apply("syntax", a, b)
+
+        hm = re.match(r"(#{1,3})( .+)", line)
+        if hm:
+            level = len(hm.group(1))
+            apply(f"h{level}", 0, len(line))
+            syntax(0, level + 1)
+            return
+
+        bm = re.match(r"([-*] )", line)
+        if bm:
+            syntax(0, len(bm.group(1)))
+
+        # bold before italic: prevents * inside ** from being matched as italic
+        for m in re.finditer(r"\*\*(.+?)\*\*", line):
+            apply("bold",   m.start(1), m.end(1))
+            syntax(m.start(),    m.start() + 2)
+            syntax(m.end() - 2,  m.end())
+
+        for m in re.finditer(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", line):
+            apply("italic", m.start(1), m.end(1))
+            syntax(m.start(),    m.start() + 1)
+            syntax(m.end() - 1,  m.end())
+
+        for m in re.finditer(r"_(.+?)_", line):
+            apply("italic", m.start(1), m.end(1))
+            syntax(m.start(),    m.start() + 1)
+            syntax(m.end() - 1,  m.end())
+
+        for m in re.finditer(r"`(.+?)`", line):
+            apply("code",   m.start(1), m.end(1))
+            syntax(m.start(),    m.start() + 1)
+            syntax(m.end() - 1,  m.end())
 
     def _wrap(self, marker):
         buf = self.editor.get_buffer()
