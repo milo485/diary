@@ -24,7 +24,7 @@
   <launchable type="desktop-id">org.diary.Diary.desktop</launchable>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="1.2" date="2026-05-30">
+    <release version="1.1" date="2026-05-30">
       <description>
         <p>Visual overhaul and multi-diary management.</p>
         <ul>
@@ -36,15 +36,6 @@
           <li>Today's date shown as subtitle in the main header</li>
           <li>Entries heading with count in the sidebar</li>
         </ul>
-      </description>
-    </release>
-    <release version="1.1" date="2026-05-29">
-      <description>
-        <p>
-          Portable single-file vault that you can store at any location of your
-          choice. New welcome screen to create or open a diary, and a menu bar
-          to create, open and export diary files. Flatpak-only build.
-        </p>
       </description>
     </release>
     <release version="1.0" date="2026-05-29">
