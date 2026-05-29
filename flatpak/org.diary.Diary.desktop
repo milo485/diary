@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Diary
+Comment=Encrypted personal diary
+Exec=diary
+Icon=org.diary.Diary
+Terminal=false
+Categories=Office;TextEditor;
+Keywords=Diary;Journal;Notes;Encrypted;
+StartupNotify=true

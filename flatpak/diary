@@ -1,0 +1,3 @@
+#!/bin/sh
+# Launches the GTK front-end of Diary inside the Flatpak.
+exec python3 /app/share/diary/diary_gtk.py "$@"

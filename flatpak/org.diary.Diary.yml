@@ -1,0 +1,57 @@
+app-id: org.diary.Diary
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
+command: diary
+
+finish-args:
+  # Display (Wayland with X11 fallback)
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # Make the bundled Python packages (cryptography) importable
+  - --env=PYTHONPATH=/app/lib/python3.12/site-packages
+  # Read/write the vault file at a user-chosen location in their home directory.
+  - --filesystem=home
+
+modules:
+  # 1) cryptography + dependencies from pre-downloaded wheels (offline build)
+  - name: python3-cryptography
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links="." --prefix=${FLATPAK_DEST}
+        --no-build-isolation cryptography cffi pycparser
+    sources:
+      - type: file
+        path: wheels/cryptography-48.0.0-cp311-abi3-manylinux_2_28_x86_64.whl
+      - type: file
+        path: wheels/cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+      - type: file
+        path: wheels/pycparser-3.0-py3-none-any.whl
+
+  # 2) The application itself
+  - name: diary
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 diarycore.py ${FLATPAK_DEST}/share/diary/diarycore.py
+      - install -Dm644 diary_gtk.py ${FLATPAK_DEST}/share/diary/diary_gtk.py
+      - install -Dm755 diary ${FLATPAK_DEST}/bin/diary
+      - install -Dm644 org.diary.Diary.desktop
+        ${FLATPAK_DEST}/share/applications/org.diary.Diary.desktop
+      - install -Dm644 org.diary.Diary.svg
+        ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/org.diary.Diary.svg
+      - install -Dm644 org.diary.Diary.metainfo.xml
+        ${FLATPAK_DEST}/share/metainfo/org.diary.Diary.metainfo.xml
+    sources:
+      - type: file
+        path: ../diarycore.py
+      - type: file
+        path: ../diary_gtk.py
+      - type: file
+        path: diary
+      - type: file
+        path: org.diary.Diary.desktop
+      - type: file
+        path: org.diary.Diary.svg
+      - type: file
+        path: org.diary.Diary.metainfo.xml

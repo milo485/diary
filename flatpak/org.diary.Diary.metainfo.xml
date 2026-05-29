@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.diary.Diary</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Diary</name>
+  <summary>Encrypted personal diary</summary>
+  <description>
+    <p>
+      A small, secure diary. Every entry is automatically timestamped and
+      stored encrypted with your master password (AES via Fernet, key derived
+      with scrypt).
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Write entries with automatic timestamps and simple Markdown formatting</li>
+      <li>Entry list with click to read and delete with confirmation</li>
+      <li>Full-text search across all entries</li>
+      <li>End-to-end encryption with a master password</li>
+      <li>Portable single-file vault stored at a location you choose</li>
+      <li>Menu bar to create, open (import) and export diary files</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">org.diary.Diary.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.1" date="2026-05-29">
+      <description>
+        <p>
+          Portable single-file vault that you can store at any location of your
+          choice. New welcome screen to create or open a diary, and a menu bar
+          to create, open and export diary files. Flatpak-only build.
+        </p>
+      </description>
+    </release>
+    <release version="1.0" date="2026-05-29">
+      <description>
+        <p>First release: encrypted entries, search, GTK4 interface.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Flatpak build artifacts (regenerated on build)
+.flatpak-builder/
+build-dir/
+repo/
+*.flatpak
+
+# Personal diary data (NEVER upload!)
+journal.enc
+journal.salt
+*.salt
+
+# Editor / OS clutter
+.vscode/
+.idea/
+*~
+.DS_Store
